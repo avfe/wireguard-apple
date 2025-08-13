@@ -6,6 +6,7 @@
 "actionOK" = "OK";
 "actionCancel" = "Cancel";
 "actionSave" = "Save";
+"actionConnect" = "Connect";
 
 // Tunnels list UI
 
@@ -25,6 +26,7 @@
 "addTunnelMenuImportFile" = "Create from file or archive";
 "addTunnelMenuQRCode" = "Create from QR code";
 "addTunnelMenuFromScratch" = "Create from scratch";
+"addTunnelMenuFromLink" = "Create from link";
 
 // Tunnels list alerts
 
@@ -36,6 +38,7 @@
 
 "alertBadConfigImportTitle" = "Unable to import tunnel";
 "alertBadConfigImportMessage (%@)" = "The file ‘%@’ does not contain a valid WireGuard configuration";
+"alertInvalidURLErrorMessage" = "The link is invalid";
 
 "deleteTunnelsConfirmationAlertButtonTitle" = "Delete";
 "deleteTunnelConfirmationAlertButtonMessage (%d)" = "Delete %d tunnel?";
