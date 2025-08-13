@@ -148,6 +148,11 @@ class TunnelsListTableViewController: UIViewController {
         }
         alert.addAction(scanQRCodeAction)
 
+        let importLinkAction = UIAlertAction(title: tr("addTunnelMenuFromLink"), style: .default) { [weak self] _ in
+            self?.presentViewControllerForLinkImport()
+        }
+        alert.addAction(importLinkAction)
+
         let createFromScratchAction = UIAlertAction(title: tr("addTunnelMenuFromScratch"), style: .default) { [weak self] _ in
             if let self = self, let tunnelsManager = self.tunnelsManager {
                 self.presentViewControllerForTunnelCreation(tunnelsManager: tunnelsManager)
@@ -196,6 +201,58 @@ class TunnelsListTableViewController: UIViewController {
         let scanQRCodeNC = UINavigationController(rootViewController: scanQRCodeVC)
         scanQRCodeNC.modalPresentationStyle = .fullScreen
         present(scanQRCodeNC, animated: true)
+    }
+
+    func presentViewControllerForLinkImport() {
+        let alert = UIAlertController(title: tr("addTunnelMenuFromLink"), message: nil, preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.placeholder = "https://"
+            textField.keyboardType = .URL
+            textField.autocapitalizationType = .none
+            textField.autocorrectionType = .no
+        }
+        alert.addAction(UIAlertAction(title: tr("actionCancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: tr("actionConnect"), style: .default) { [weak self, weak alert] _ in
+            guard let self = self, let urlString = alert?.textFields?.first?.text, let url = URL(string: urlString) else {
+                ErrorPresenter.showErrorAlert(title: tr("alertBadConfigImportTitle"), message: tr("alertInvalidURLErrorMessage"), from: self)
+                return
+            }
+            self.busyIndicator.startAnimating()
+            let task = URLSession.shared.dataTask(with: url) { data, _, error in
+                DispatchQueue.main.async { self.busyIndicator.stopAnimating() }
+                if let error = error {
+                    DispatchQueue.main.async {
+                        ErrorPresenter.showErrorAlert(title: tr("alertBadConfigImportTitle"), message: error.localizedDescription, from: self)
+                    }
+                    return
+                }
+                guard let data = data else {
+                    DispatchQueue.main.async {
+                        ErrorPresenter.showErrorAlert(title: tr("alertBadConfigImportTitle"), message: tr("alertInvalidURLErrorMessage"), from: self)
+                    }
+                    return
+                }
+                do {
+                    struct ConfigResponse: Decodable { let config: String }
+                    let response = try JSONDecoder().decode(ConfigResponse.self, from: data)
+                    let name = url.deletingPathExtension().lastPathComponent
+                    let tunnelConfiguration = try TunnelConfiguration(fromWgQuickConfig: response.config, called: name)
+                    self.tunnelsManager?.add(tunnelConfiguration: tunnelConfiguration) { result in
+                        if case .failure(let error) = result {
+                            DispatchQueue.main.async {
+                                ErrorPresenter.showErrorAlert(error: error, from: self)
+                            }
+                        }
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        ErrorPresenter.showErrorAlert(title: tr("alertBadConfigImportTitle"), message: error.localizedDescription, from: self)
+                    }
+                }
+            }
+            task.resume()
+        })
+        present(alert, animated: true)
     }
 
     @objc func selectButtonTapped() {
